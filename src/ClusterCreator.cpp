@@ -6,8 +6,14 @@
 //from std
 #include <iostream>
 #include <utility>
-
-
+#include <string>
+//ROOT
+#include <TH1.h>
+#include <TCanvas.h>
+#include <TString.h>
+#include <TLine.h>
+#include <TColor.h>
+#include <TPaveText.h>
 ClusterCreator::~ClusterCreator(){
   for(auto& clPtr : clusters){
     delete clPtr;
@@ -47,25 +53,31 @@ std::vector<Cluster*> ClusterCreator::FindClustersInEventMax(
 
 
 std::vector<Cluster*> ClusterCreator::FindClustersInEventBoole(const Event& event,
-                              const double neighbourThreshold,
-                              const double seedThreshold,
-                              const double sumThreshold,
-                              const int maxClusterSize,
-                              bool debug)
+							       const double neighbourThreshold,
+							       const double seedThreshold,
+							       const double sumThreshold,
+							       const int maxClusterSize,
+							       bool debug, 
+							       std::string savename)
 {
   std::vector<Cluster*> foundClusters;
   std::vector<Channel>::const_iterator lastStopDigitIter = event.begin(); // end digit of last cluster, to prevent overlap
 
   // Since Digit Container is sorted wrt channelID, clusters are defined searching for bumps of ADC Count
   std::vector<Channel>::const_iterator seedDigitIter = event.begin();
-
+  //debug. Fill a histogram with the channels to visualize the clusterization
+  //theHisto = all ADC vals
+  //clusterHist = all channels in a cluster, colored red.
+  TH1D theHisto("theHisto","adc_vs_channel; Channel; ADC value",event.size(),1,event.size());
+  TH1D clusterHist("clusterHist","adc_vs_channel; Channel; ADC value",event.size(),1,event.size());
   while(seedDigitIter != event.end()){
       // loop over digits
-
+    
 //    std::cout << "Checking channel number " << seedDigitIter->ChannelNumber << std::endl;
 
     Channel seedDigit = *seedDigitIter; // the seed of the cluster
-
+    theHisto.SetBinContent(seedDigit.ChannelNumber,seedDigit.AdcValue);
+    
     if(seedDigit.AdcValue >= seedThreshold){
       // ADC above seed : start clustering
 
@@ -220,6 +232,48 @@ std::vector<Cluster*> ClusterCreator::FindClustersInEventBoole(const Event& even
       ++seedDigitIter;
 
     } // END of loop over Digits
+  //loop over 'found' clusters
+  for(auto cluster: foundClusters){
+    for(auto chan : cluster->GetRelatedChannels()){
+      clusterHist.SetBinContent(chan.ChannelNumber,chan.AdcValue);
+    }
+  }
+  TCanvas cc;
 
+  clusterHist.SetFillColor(kRed);
+  clusterHist.SetFillColorAlpha(kRed,0.5);
+  theHisto.SetLineColor(kBlack);
+  theHisto.SetFillColor(kBlack);
+  theHisto.GetYaxis()->SetRangeUser(0.000001,30);
+  TLine l1(1, seedThreshold, event.size(),seedThreshold);
+  TLine l2(1, neighbourThreshold,event.size(),neighbourThreshold);
+  //  TLine l3(1, sumThreshold,event.size(),sumThreshold);
+  l1.SetLineStyle(kDashed);
+  l1.SetLineColor(kBlue);
+  l2.SetLineStyle(kDashed);
+  l2.SetLineColor(kGreen+2);
+  //l3.SetLineStyle(kDotted);
+  //l3.SetLineStyle(kMagenta);
+  clusterHist.Draw();
+  theHisto.Draw("same");
+
+  l1.Draw();
+  l2.Draw();
+  //l3.Draw();
+  TPaveText pt(.75,.5,.95,.75,"brNDC");
+  pt.SetBorderSize(0);
+  pt.SetFillColor(0);
+  pt.SetFillStyle(4000);
+  pt.AddText(Form("N clust = %d",foundClusters.size()));
+  pt.Draw();
+  TString sn(savename);
+  sn+="ClusterHistogram.pdf";
+  cc.SaveAs(sn);
+
+  sn = TString(savename);
+  sn+="ClusterHistogram_logy.pdf";
+  cc.SetLogy(1);
+  cc.SaveAs(sn);
+    cc.SetLogy(0);
     return foundClusters;
 }

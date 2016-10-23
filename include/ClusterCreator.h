@@ -3,7 +3,7 @@
 
 //from std
 #include <vector>
-
+#include <string>
 //from here
 #include "Cluster.h"
 
@@ -32,6 +32,7 @@ public:
     ,const double sumThreshold
     ,const int maxClusterSize
     ,bool debug
+    ,std::string savename = ""
     );
 
   std::size_t getNumberOfClusters() const {return clusters.size();}

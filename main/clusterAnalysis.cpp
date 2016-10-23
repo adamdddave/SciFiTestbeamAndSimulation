@@ -17,7 +17,7 @@
 #include "TGraph.h"
 #include "TF1.h"
 #include "TCanvas.h"
-
+#include <TString.h>
 //from RooFit
 #include "RooFit.h"
 #include "RooPlot.h"
@@ -235,9 +235,10 @@ std::pair<EDouble, EDouble> analyse(std::string file2analyse, const config& c, b
     }
   }
   else{
-    for(unsigned int i = 0; i<inputTree->GetEntriesFast(); ++i){
+    for(unsigned int i = 0; i<inputTree->GetEntries(); ++i){      
+      TString evName = Form("Event%d_",i);
       clustersInModule["cern"] = clCreators["cern"].FindClustersInEventBoole(*(data["cern"]->at(i)), 1.5, 2.5, 4.0, 100, false);
-      clustersInModule["slayer"] = clCreators["slayer"].FindClustersInEventBoole(*(data["slayer"]->at(i)), 1.5, 2.5, 4.0, 100, false);
+      clustersInModule["slayer"] = clCreators["slayer"].FindClustersInEventBoole(*(data["slayer"]->at(i)), 1.5, 2.5, 4.0, 100, false,evName.Data());
       clustersInModule["HD2"] = clCreators["HD2"].FindClustersInEventBoole(*(data["HD2"]->at(i)), 1.5, 2.5, 4.0, 100, false);
 
       if(  clustersInModule["cern"].size() == 1
@@ -367,7 +368,7 @@ std::pair<EDouble, EDouble> analyse(std::string file2analyse, const config& c, b
     EDouble eff;
 
     if(c.simulation){
-      std::cout << "Found " << clCreators["simulation"].getNumberOfClusters() << " clusters in " << inputTree->GetEntriesFast() << " events!\n";
+      std::cout << "Found " << clCreators["simulation"].getNumberOfClusters() << " clusters in " << inputTree->GetEntries() << " events!\n";
       std::cout << "Missed " << missedEvents << " events\n";
       double event2OneOrMoreClusterEff = 1. - (double)missedEvents/data["simulation"]->size();
       double event2OneOrMoreClusterEffErr = TMath::Sqrt( (1-event2OneOrMoreClusterEff)*event2OneOrMoreClusterEff/(double)data["simulation"]->size() );
